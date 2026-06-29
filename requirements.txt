@@ -1,0 +1,14 @@
+pymysql
+faker
+SQLAlchemy
+langchain
+langchain-ollama
+langchain-huggingface
+langchain-chroma
+langchain-community
+python-dotenv
+sentence-transformers
+gradio
+langchain>=0.1.16
+langchain-community>=0.0.34
+langchain-core
