@@ -85,7 +85,7 @@ DB_PASSWORD=your_mysql_password
 DB_NAME=mes_database
 
 # Cấu hình hệ số quy mô dữ liệu (Scale Factor)
-SCALE_FACTOR=50
+SCALE_FACTOR=15000
 ```
 
 *Lưu ý: Hãy chắc chắn cơ sở dữ liệu tương ứng với `DB_NAME` đã được tạo trước đó trong MySQL của bạn:*
