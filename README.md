@@ -1,118 +1,100 @@
 # Hướng dẫn Cài đặt và Chạy Ứng dụng MES Agent
 
-Hệ thống **MES Agent** tích hợp Trí tuệ nhân tạo (LLM Agent) hỗ trợ quản lý, truy vấn thông tin cơ sở dữ liệu sản xuất (MES) và tự động hóa quy trình phân bổ nhiệm vụ.
+Hệ thống MES Agent tích hợp trí tuệ nhân tạo (LLM Agent) giúp hỗ trợ truy vấn, tương tác với cơ sở dữ liệu hệ thống điều hành sản xuất (MES) bằng ngôn ngữ tự nhiên và thực hiện các tác vụ quản lý.
 
 ---
 
-## 📌 Các tính năng cốt lõi của Hệ thống
+## 📌 Các tính năng cốt lõi của dự án
 
-1. **Quản lý Cấu hình (Configuration)**: Tự động tải các thông số kết nối cơ sở dữ liệu MySQL và hệ số quy mô sinh dữ liệu từ file `.env`.
-2. **Khởi tạo Lược đồ Cơ sở Dữ liệu (Database Schema Manager)**: Thiết lập 16 bảng thực thể chuẩn hóa phục vụ cho quy trình may mặc, cắt vá, kho bãi và nhiệm vụ sản xuất.
-3. **Mô phỏng Dữ liệu Kiểm thử (Data Generator)**: Tự động sinh dữ liệu thực tế dựa trên thư viện Faker và hệ số quy mô `SCALE_FACTOR`.
-4. **Chuẩn hóa Thực thể (Request Rewriter/RAG)**: Sử dụng HuggingFace Embeddings (`all-MiniLM-L6-v2`) kết hợp cơ sở dữ liệu vector Chroma để chuẩn hóa các tên thực thể không đồng nhất trước khi đưa vào LLM (ví dụ: chuyển "PolyU" thành "Hong Kong Polytechnic University").
-5. **Định nghĩa API Nội bộ (Custom Tools)**: Cung cấp công cụ `allocate_task` cho phép Agent tương tác trực tiếp với các chức năng nghiệp vụ của hệ thống MES.
-6. **Điều phối Tác tử (LLM Agent Manager)**: Sử dụng LangChain SQL Agent cùng mô hình ngôn ngữ lớn Ollama (`llama3`) chạy cục bộ để suy luận, lập kế hoạch, truy vấn SQL và thực thi nhiệm vụ theo thời gian thực.
-
----
-
-## 🛠️ Yêu cầu Hệ thống & Tiền đề
-
-* **Python**: Phiên bản 3.10 trở lên.
-* **MySQL Server**: Đã cài đặt và đang chạy dịch vụ MySQL.
-* **Ollama**: Đã cài đặt và tải sẵn mô hình `llama3`.
-  * Lệnh chạy Ollama và tải model:
-    ```bash
-    ollama run llama3
-    ```
+1. **Quản lý Cấu hình**: Hệ thống đọc các thiết lập kết nối cơ sở dữ liệu (MySQL) và hệ số quy mô sinh dữ liệu từ file `.env` thông qua module `config.py`.
+2. **Khởi tạo và Mô phỏng Dữ liệu**: Module `database_init.py` thiết lập 16 bảng thực thể liên quan đến quy trình sản xuất (đơn hàng, kho bãi, vật liệu, nhiệm vụ may/cắt...) và tự động sinh dữ liệu kiểm thử thực tế dựa trên thư viện Faker kết hợp hệ số quy mô (`SCALE_FACTOR`).
+3. **Chuẩn hóa Thực thể (Request Rewriter)**: Sử dụng HuggingFace Embeddings (`all-MiniLM-L6-v2`) và cơ sở dữ liệu vector Chroma để chuẩn hóa các tên thực thể không đồng nhất trong câu truy vấn của người dùng nhằm giảm thiểu sai lệch thông tin trước khi đưa vào LLM.
+4. **Các Công cụ Tích hợp (Custom Tools)**: Hệ thống cung cấp các công cụ nội bộ cho Agent để trực tiếp tương tác với dữ liệu MES, bao gồm:
+   - `find_order_details`: Tra cứu thông tin chi tiết của đơn hàng.
+   - `allocate_task`: Tự động phân bổ nhiệm vụ cắt và may cho các nhóm làm việc.
+   - `store_materials`: Tự động nhập kho vật liệu.
+   - `complete_task`: Báo cáo hoàn thành các nhiệm vụ sản xuất.
+   - `get_busy_workers`: Truy xuất trạng thái các nhóm làm việc và số lượng nhiệm vụ đang thực hiện.
+5. **Điều phối Tác tử (Agent Orchestration)**: Xây dựng quy trình xử lý đa bước (Multi-step Dynamical Operations Planner) sử dụng mô hình LLM từ Ollama (`llama3`). Agent có khả năng lên kế hoạch sử dụng các công cụ (tools) hoặc sinh câu truy vấn SQL trực tiếp để giải quyết yêu cầu của người dùng.
+6. **Giao diện Người dùng (Web UI)**: Cung cấp giao diện tương tác qua trình duyệt sử dụng thư viện Gradio, hỗ trợ trực quan hóa quy trình suy nghĩ (Streaming Thought Process) và tải về dữ liệu báo cáo dạng CSV.
 
 ---
 
-## 🚀 Các Bước Cài đặt và Triển khai
+## 🛠️ Yêu cầu Hệ thống
+
+- **Hệ điều hành**: Windows, macOS hoặc Linux.
+- **Python**: Phiên bản 3.10 trở lên.
+- **MySQL Server**: Đã cài đặt phần mềm và đang chạy dịch vụ MySQL.
+- **Ollama**: Đã cài đặt phần mềm Ollama và tải sẵn mô hình `llama3`.
+  - Lệnh tải mô hình: `ollama run llama3`
+
+---
+
+## 🚀 Hướng dẫn Cài đặt
 
 ### Bước 1: Tạo môi trường ảo (Virtual Environment)
+Mở Terminal hoặc Command Prompt tại thư mục gốc của dự án và chạy lệnh sau:
 
-Mở Terminal (hoặc Command Prompt) tại thư mục dự án và chạy lệnh sau để cô lập môi trường:
-
-* **Đối với Windows:**
-  ```bash
+- **Windows**:
+  ```cmd
   python -m venv venv
   ```
-* **Đối với macOS/Linux:**
+- **macOS/Linux**:
   ```bash
   python3 -m venv venv
   ```
 
 ### Bước 2: Kích hoạt môi trường ảo
-
-* **Đối với Windows (Command Prompt):**
+- **Windows (Command Prompt)**:
   ```cmd
-  venv\scripts\activate
+  venv\Scripts\activate
   ```
-* **Đối với Windows (PowerShell):**
+- **Windows (PowerShell)**:
   ```powershell
   .\venv\Scripts\Activate.ps1
   ```
-* **Đối với macOS/Linux:**
+- **macOS/Linux**:
   ```bash
   source venv/bin/activate
   ```
 *(Lưu ý: Sau khi kích hoạt thành công, bạn sẽ thấy tiền tố `(venv)` xuất hiện ở đầu dòng lệnh).*
 
-### Bước 3: Cài đặt các thư viện cần thiết
-
-Đảm bảo file [requirements.txt](file:///c:/tandoan/dev/python/IS6101/requirements.txt) có sẵn trong thư mục dự án. Tiến hành chạy lệnh sau:
-
+### Bước 3: Cài đặt thư viện
+Với môi trường ảo đã được kích hoạt, cài đặt các gói phụ thuộc cần thiết từ file `requirements.txt`:
 ```bash
 pip install -r requirements.txt
-
-## update
-pip install -U -r requirements.txt
-
 ```
 
-*Các thư viện chính bao gồm: `pymysql`, `faker`, `SQLAlchemy`, `langchain`, `langchain-community`, `langchain-huggingface`, `chromadb`, `python-dotenv`.*
-
-### Bước 4: Cấu hình Biến môi trường (`.env`)
-
-Tạo hoặc chỉnh sửa file [.env](file:///c:/tandoan/dev/python/IS6101/.env) trong thư mục gốc của dự án với nội dung cấu hình kết nối MySQL và hệ số quy mô dữ liệu:
-
-```env
-# Cấu hình kết nối cơ sở dữ liệu MySQL
-DB_HOST=localhost
-DB_PORT=3306
-DB_USER=root
-DB_PASSWORD=your_mysql_password
-DB_NAME=mes_database
-
-# Cấu hình hệ số quy mô dữ liệu (Scale Factor)
-SCALE_FACTOR=15000
-```
-
-*Lưu ý: Hãy chắc chắn cơ sở dữ liệu tương ứng với `DB_NAME` đã được tạo trước đó trong MySQL của bạn:*
-```sql
-CREATE DATABASE mes_database;
-```
+### Bước 4: Cấu hình Cơ sở dữ liệu
+1. Mở công cụ quản lý MySQL của bạn và tạo một cơ sở dữ liệu mới (ví dụ `mes_database`):
+   ```sql
+   CREATE DATABASE mes_database;
+   ```
+2. Tạo file `.env` tại thư mục gốc của dự án (hoặc đổi tên từ file `env_sample`) và thiết lập các thông số cấu hình:
+   ```env
+   DB_HOST=localhost
+   DB_PORT=3306
+   DB_USER=root
+   DB_PASSWORD=mật_khẩu_mysql_của_bạn
+   DB_NAME=mes_database
+   SCALE_FACTOR=50
+   ```
+   *(Tham số `SCALE_FACTOR` quy định số lượng bản ghi giả lập được sinh ra. Tùy chỉnh theo tài nguyên phần cứng của bạn).*
 
 ---
 
-## 🏃 Hướng dẫn Chạy ứng dụng
+## 🏃 Hướng dẫn Khởi chạy Hệ thống
 
-Sau khi hoàn tất cấu hình và kích hoạt môi trường ảo, bạn thực thi ứng dụng theo 2 bước tách biệt nhằm bảo đảm tính toàn vẹn và độc lập của hệ thống (Clean Code & Separation of Concerns):
-
-### Bước 1: Khởi tạo và Sinh dữ liệu Cơ sở dữ liệu (Chỉ chạy 1 lần)
-Chạy lệnh sau để hệ thống tự động khởi tạo 16 bảng và sinh dữ liệu kiểm thử giả định:
-
+### Bước 1: Khởi tạo Cơ sở dữ liệu
+Chạy script `database_init.py` để tạo các bảng thực thể và sinh dữ liệu giả lập. Việc này chỉ cần thực hiện một lần khi thiết lập hệ thống ban đầu hoặc khi cần đặt lại dữ liệu gốc.
 ```bash
 python database_init.py
 ```
+*(Đợi hệ thống chạy hoàn tất và hiển thị thông báo thành công trên màn hình console).*
 
-### Bước 2: Khởi động Hệ thống MES Agent Chat
-Sau khi cơ sở dữ liệu đã sẵn sàng, bạn khởi chạy module điều phối AI:
-
+### Bước 2: Chạy ứng dụng MES Agent
+Khởi động giao diện người dùng bằng cách chạy script `app.py`:
 ```bash
 python app.py
 ```
-
-### Quy trình Xử lý nội tại:
-1. **Tiền xử lý Truy vấn**: Hệ thống nhận câu lệnh gốc của người dùng, đưa qua bộ lọc của `RequestRewriter` sử dụng vector store Chroma để chuẩn hóa thực thể.
-2. **Lập kế hoạch & Thực thi**: Tác tử SQL Agent (Ollama Llama3) nhận yêu cầu đã chuẩn hóa, sinh truy vấn SQL để lấy kết quả từ MySQL, và tự động gọi công cụ `allocate_task` khi cần thiết để trả lời người dùng bằng ngôn ngữ tự nhiên.
+Sau khi khởi động thành công, Terminal sẽ hiển thị đường dẫn truy cập cục bộ (thường là `http://0.0.0.0:7860` hoặc `http://127.0.0.0:7860`). Mở đường dẫn này trên trình duyệt web của bạn để bắt đầu sử dụng Hệ thống MES Agent Assistant.
